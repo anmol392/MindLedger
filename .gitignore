@@ -1,0 +1,15 @@
+# .gitignore for Olympiad Intellect Ledger
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Environment Variables / Config
+config_local.py
+.env
+
+# Blockchain Data (if stored separately)
+blockchain_data.json

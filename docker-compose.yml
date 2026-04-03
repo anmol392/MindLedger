@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL with pgvector for Semantic Search (Proof-of-Intellect)
+  db:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_USER: mindledger_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-securepassword}
+      POSTGRES_DB: mindledger_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # 2. Redis for Real-time Verification Queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # 3. AI-Engine (FastAPI + Sentence-Transformers)
+  ai-engine:
+    build: 
+      context: ./backend/ai_engine
+    ports:
+      - "8001:8001"
+    environment:
+      - MODEL_NAME=all-MiniLM-L6-v2
+
+  # 4. API-Server (Node.js + Socket.io)
+  api-server:
+    build: 
+      context: ./backend/api_server
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_URL=postgresql://mindledger_admin:securepassword@db:5432/mindledger_db
+      - REDIS_URL=redis://redis:6379
+      - AI_ENGINE_URL=http://ai-engine:8001
+      - PORT=8000
+    depends_on:
+      - db
+      - redis
+      - ai-engine
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Required for sandbox code runner
+
+  # 5. Frontend (Next.js Application)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api-server
+
+volumes:
+  pgdata:

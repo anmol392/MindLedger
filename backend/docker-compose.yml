@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  db:
+    image: ankane/pgvector:latest # Postgres with pgvector pre-installed
+    environment:
+      POSTGRES_USER: mindledger_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-securepassword}
+      POSTGRES_DB: mindledger_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  ai-engine:
+    build: ./ai_engine
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    environment:
+      - MODEL_NAME=all-MiniLM-L6-v2
+    volumes:
+      - ./ai_engine:/app
+    working_dir: /app
+
+  api-server:
+    build: ./api_server
+    command: node index.js
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_URL=postgresql://mindledger_admin:securepassword@db:5432/mindledger_db
+      - REDIS_URL=redis://redis:6379
+      - AI_ENGINE_URL=http://ai-engine:8001
+      - PORT=8000
+    depends_on:
+      - db
+      - redis
+      - ai-engine
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # For sandboxed code execution
+      - ./api_server:/app
+    working_dir: /app
+
+volumes:
+  pgdata:

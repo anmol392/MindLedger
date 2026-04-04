@@ -86,7 +86,8 @@ app.post('/api/solve/submit', async (req, res) => {
     const solHash = crypto.createHash('sha256').update(solution).digest('hex');
 
     // 1. Get embedding from AI-Engine
-    const aiRes = await axios.post('http://ai-engine:8001/analyze/fingerprint', {
+    const aiEngineUrl = process.env.AI_ENGINE_URL || 'http://localhost:8001';
+    const aiRes = await axios.post(`${aiEngineUrl}/analyze/fingerprint`, {
         solution_text: solution,
         problem_id: problemId,
         wallet_address: wallet
@@ -106,7 +107,28 @@ app.post('/api/solve/submit', async (req, res) => {
     res.json({ status: 'queued', message: "Submission sent to peer review network." });
 });
 
-// 5. CBDC Bridge Webhook (India e-Rupee integration)
+// 5. AI Practice (Layer 2)
+app.post('/api/practice/generate', async (req, res) => {
+    try {
+        const aiEngineUrl = process.env.AI_ENGINE_URL || 'http://localhost:8001';
+        const aiRes = await axios.post(`${aiEngineUrl}/practice/generate`, req.body);
+        res.json(aiRes.data);
+    } catch (err) {
+        res.status(500).json({ error: 'AI Engine unreachable' });
+    }
+});
+
+app.post('/api/practice/verify', async (req, res) => {
+    try {
+        const aiEngineUrl = process.env.AI_ENGINE_URL || 'http://localhost:8001';
+        const aiRes = await axios.post(`${aiEngineUrl}/practice/verify`, req.body);
+        res.json(aiRes.data);
+    } catch (err) {
+        res.status(500).json({ error: 'AI Engine unreachable' });
+    }
+});
+
+// 6. CBDC Bridge Webhook (India e-Rupee integration)
 app.post('/api/cbdc/webhook', (req, res) => {
     const { tx_ref, amount, status, signature } = req.body;
     // In production: verify partner signature from FIU entity

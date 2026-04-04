@@ -1,0 +1,100 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Inter", "system-ui", sans-serif;
+  --font-mono: "Fira Code", "monospace";
+
+  --color-background: #ffffff;
+  --color-foreground: #000000;
+  
+  --color-primary: #7F77DD;
+  --color-primary-foreground: #ffffff;
+  
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #000000;
+
+  --color-accent: #7F77DD;
+  --color-accent-foreground: #ffffff;
+
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #666666;
+
+  --color-border: #e4e4e7;
+  --color-input: #f4f4f5;
+  --color-ring: #7F77DD;
+
+  --radius-lg: 1.25rem;
+  --radius-md: 1rem;
+  --radius-sm: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased min-h-screen flex flex-col;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+:root {
+  --background: 100% 0 0;
+  --foreground: 0% 0 0;
+  --card: 100% 0 0;
+  --card-foreground: 0% 0 0;
+  --popover: 100% 0 0;
+  --popover-foreground: 0% 0 0;
+  --primary: 51% 0.26 277;
+  --primary-foreground: 98% 0 0;
+  --secondary: 97% 0 0;
+  --secondary-foreground: 20% 0 0;
+  --muted: 97% 0 0;
+  --muted-foreground: 55% 0 0;
+  --accent: 97% 0 0;
+  --accent-foreground: 20% 0 0;
+  --border: 92% 0 0;
+  --input: 92% 0 0;
+  --ring: 70% 0 0;
+}
+
+/* Custom Utilities */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-black/5 shadow-sm;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-black to-black/60;
+  }
+}
+
+button:focus {
+  outline: none;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-background;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full transition-colors hover:bg-muted-foreground/30;
+}
+
+@keyframes scan {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(100%); }
+}
+
+.animate-scan {
+  animation: scan 3s linear infinite;
+}

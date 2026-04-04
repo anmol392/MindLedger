@@ -46,6 +46,38 @@ contract POIToken is ERC20, Ownable, Pausable {
         emit MinerRewarded(_to, amount, _tier, _solutionHash);
     }
 
+    /**
+     * @notice Reward co-authors based on contribution weights.
+     */
+    function mintPaperReward(
+        address[] calldata contributors,
+        uint256[] calldata weights, // must sum to 100
+        uint256 totalReward
+    ) external onlyOwner {
+        checkHalving();
+        require(contributors.length == weights.length, "MindLedger: MISMATCH");
+        for (uint i = 0; i < contributors.length; i++) {
+            uint256 share = (totalReward * weights[i]) / 100;
+            require(totalSupply() + share <= MAX_SUPPLY, "CAP REACHED");
+            _mint(contributors[i], share);
+        }
+    }
+
+    /**
+     * @notice Reward contest winners.
+     */
+    function mintContestReward(
+        address[] calldata winners,
+        uint256[] calldata amounts
+    ) external onlyOwner {
+        checkHalving();
+        require(winners.length == amounts.length, "MindLedger: MISMATCH");
+        for (uint i = 0; i < winners.length; i++) {
+            require(totalSupply() + amounts[i] <= MAX_SUPPLY, "CAP REACHED");
+            _mint(winners[i], amounts[i]);
+        }
+    }
+
     function checkHalving() internal {
         if (block.timestamp >= lastHalvingTime + HALVING_INTERVAL) {
             currentRewardRateTier1 /= 2;

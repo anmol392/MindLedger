@@ -8,13 +8,32 @@ const Docker = require('dockerode');
 const { ethers } = require('ethers');
 const crypto = require('crypto');
 const axios = require('axios');
+const { PrismaClient } = require('@prisma/client');
+const { Queue } = require('bullmq');
+const { Server: HocuspocusServer } = require('@hocuspocus/server');
+const cors = require('cors');
 require('dotenv').config();
 
+const prisma = new PrismaClient();
 const app = express();
+app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
+const redisConnection = { host: process.env.REDIS_HOST || 'localhost', port: process.env.REDIS_PORT || 6379 };
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 const docker = new Docker();
+
+// BullMQ Queues
+const translationQueue = new Queue('problem-translation', { connection: redisConnection });
+const contestQueue = new Queue('contest-lifecycle', { connection: redisConnection });
+
+// Hocuspocus Collaborative Server
+const hocuspocus = new HocuspocusServer({
+  name: 'collaborative-papers',
+  port: 1234,
+  timeout: 30000,
+});
+hocuspocus.listen();
 
 app.use(express.json());
 
@@ -28,6 +47,18 @@ io.on('connection', (socket) => {
         walletAddress = wallet;
         problemId = pId;
         console.log(`[SESSION] Started for ${wallet} on problem ${pId}`);
+    });
+
+    // 4. Live Contest Logic (Socket.io)
+    socket.on('join_contest', ({ contestId, userId }) => {
+        socket.join(`contest_${contestId}`);
+        console.log(`[ARENA] User ${userId} joined contest ${contestId}`);
+    });
+
+    socket.on('submit_contest_task', ({ contestId, userId, problemId, score }) => {
+        // Broadcast leaderboard update to all in the contest room
+        // Fetch real-time leaderboard data and emit 'leaderboard_update'
+        // io.to(`contest_${contestId}`).emit('leaderboard_update', { data: [] });
     });
 
     // Face verification frame validation
@@ -128,12 +159,80 @@ app.post('/api/practice/verify', async (req, res) => {
     }
 });
 
-// 6. CBDC Bridge Webhook (India e-Rupee integration)
-app.post('/api/cbdc/webhook', (req, res) => {
-    const { tx_ref, amount, status, signature } = req.body;
-    // In production: verify partner signature from FIU entity
-    console.log(`[CBDC] e-Rupee disbursement update: ${tx_ref} [${status}]`);
-    res.sendStatus(200);
+// 7. Feature APIs (Dashboard, Contests, Papers)
+app.get('/api/dashboard', async (req, res) => {
+    const { wallet } = req.query;
+    // In prod: Fetch from UserDashboardCache or aggregate
+    res.json({
+        stats: { mntEarned: "1,250.40", solved: 145, streak: 12, rank: 245 },
+        earnings: Array.from({ length: 30 }, (_, i) => ({ date: `Apr ${i + 1}`, mnt: Math.floor(Math.random() * 50) + 10 })),
+        subjects: [
+            { name: 'Mathematics', value: 45, color: '#00D4AA' },
+            { name: 'Physics', value: 32, color: '#F59E0B' },
+            { name: 'Chemistry', value: 18, color: '#10B981' },
+            { name: 'Comp. Science', value: 50, color: '#7C3AED' },
+        ]
+    });
+});
+
+app.get('/api/contests', async (req, res) => {
+    const contests = await prisma.contest.findMany({
+        where: { isPublic: true },
+        orderBy: { startsAt: 'asc' }
+    });
+    res.json(contests);
+});
+
+app.get('/api/papers', async (req, res) => {
+    const papers = await prisma.paperCollaboration.findMany({
+        include: { creator: true, contributions: { include: { user: true } } }
+    });
+    res.json(papers);
+});
+
+// 8. Dynamic Multilingual Problems
+app.get('/api/problems/:id', async (req, res) => {
+    const { id } = req.params;
+    const { lang } = req.query;
+
+    try {
+        const problem = await prisma.problem.findUnique({
+            where: { id }
+        });
+
+        if (!problem) return res.status(404).json({ error: "Problem not found" });
+
+        if (lang && lang !== 'en') {
+            const translation = await prisma.problemTranslation.findUnique({
+                where: {
+                    problemId_langCode: {
+                        problemId: id,
+                        langCode: lang
+                    }
+                }
+            });
+
+            if (translation) {
+                return res.json({
+                    ...problem,
+                    body: translation.translatedBodyLatex,
+                    isTranslated: true
+                });
+            } else {
+                // Trigger background translation job
+                await translationQueue.add('problem-translation', { problemId: id, langCode: lang });
+                return res.json({
+                    ...problem,
+                    isTranslating: true,
+                    message: "Translation requested. Content will update shortly."
+                });
+            }
+        }
+
+        res.json(problem);
+    } catch (err) {
+        res.status(500).json({ error: "Cognitive Retrieval Failure", details: err.message });
+    }
 });
 
 const PORT = process.env.PORT || 8000;

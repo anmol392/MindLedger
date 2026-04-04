@@ -6,29 +6,29 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Inter", "system-ui", sans-serif;
+  --font-sans: "Inter", "Outfit", sans-serif;
   --font-mono: "Fira Code", "monospace";
 
-  --color-background: #ffffff;
-  --color-foreground: #000000;
+  --color-background: #FFFFFF;
+  --color-foreground: #0F172A;
   
-  --color-primary: #7F77DD;
-  --color-primary-foreground: #ffffff;
+  --color-primary: #059669;
+  --color-primary-foreground: #FFFFFF;
   
-  --color-secondary: #f4f4f5;
-  --color-secondary-foreground: #000000;
+  --color-secondary: #F59E0B;
+  --color-secondary-foreground: #0F172A;
 
-  --color-accent: #7F77DD;
-  --color-accent-foreground: #ffffff;
+  --color-accent: #059669;
+  --color-accent-foreground: #FFFFFF;
 
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #666666;
+  --color-muted: #F1F5F9;
+  --color-muted-foreground: #64748B;
 
-  --color-border: #e4e4e7;
-  --color-input: #f4f4f5;
-  --color-ring: #7F77DD;
+  --color-border: rgba(0, 0, 0, 0.05);
+  --color-input: #FFFFFF;
+  --color-ring: #059669;
 
-  --radius-lg: 1.25rem;
+  --radius-lg: 1.5rem;
   --radius-md: 1rem;
   --radius-sm: 0.75rem;
 }
@@ -38,39 +38,55 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased min-h-screen flex flex-col;
+    @apply bg-background text-foreground antialiased min-h-screen flex flex-col font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
 :root {
-  --background: 100% 0 0;
-  --foreground: 0% 0 0;
-  --card: 100% 0 0;
-  --card-foreground: 0% 0 0;
-  --popover: 100% 0 0;
-  --popover-foreground: 0% 0 0;
-  --primary: 51% 0.26 277;
-  --primary-foreground: 98% 0 0;
-  --secondary: 97% 0 0;
-  --secondary-foreground: 20% 0 0;
-  --muted: 97% 0 0;
-  --muted-foreground: 55% 0 0;
-  --accent: 97% 0 0;
-  --accent-foreground: 20% 0 0;
-  --border: 92% 0 0;
-  --input: 92% 0 0;
-  --ring: 70% 0 0;
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 161 94% 30%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 38 92% 50%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 161 94% 30%;
+  --accent-foreground: 0 0% 100%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 161 94% 30%;
 }
 
 /* Custom Utilities */
 @layer utilities {
   .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-black/5 shadow-sm;
+    @apply bg-white/70 backdrop-blur-3xl border border-black/5 shadow-2xl;
   }
   
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-black to-black/60;
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-[#0F172A] to-[#0F172A]/70;
+  }
+
+  .glow-teal {
+    @apply shadow-[0_20px_50px_rgba(5,150,105,0.1)];
+  }
+
+  .shadow-soft {
+    @apply shadow-[0_8px_30px_rgb(0,0,0,0.04)];
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 

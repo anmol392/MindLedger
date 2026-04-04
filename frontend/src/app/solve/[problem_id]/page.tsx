@@ -9,6 +9,7 @@ import { useProctoringSession } from "@/hooks/useProctoringSession";
 import Link from "next/link";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
+import axios from "axios";
 
 // Mock Problem Data
 const problemData: Record<string, any> = {
@@ -34,19 +35,54 @@ const problemData: Record<string, any> = {
 
 export default function SolvePage({ params: paramsPromise }: { params: Promise<{ problem_id: string }> }) {
   const params = use(paramsPromise);
-  const problem = problemData[params.problem_id] || problemData["1"];
+  const [problem, setProblem] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const { stream, warningCount, isTabFocused, disqualified, error: proctorError } = useProctoringSession(params.problem_id);
   
-  const [timeLeft, setTimeLeft] = useState(problem.timeLimit * 60);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [selectedLang, setSelectedLang] = useState("cpp");
   const videoRef = useRef<HTMLVideoElement>(null);
-  const solutionContent = problem.type === "code" ? "// Your implementation here" : "% Rendered LaTeX proof here";
-  const [solution, setSolution] = useState(solutionContent);
+  const [solution, setSolution] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
+    const fetchProblem = async () => {
+      try {
+        const langCode = localStorage.getItem('i18nextLng') || 'en';
+        const res = await axios.get(`http://localhost:8000/api/problems/${params.problem_id}?lang=${langCode}`, {
+          timeout: 2500
+        });
+        setProblem(res.data);
+        if (res.data.timeLimit) setTimeLeft(res.data.timeLimit * 60);
+        if (!solution) setSolution(res.data.type === "code" ? "// Your implementation here" : "% Rendered LaTeX proof here");
+        
+        if (res.data.isTranslating) {
+           setTimeout(fetchProblem, 1500);
+        } else {
+           setLoading(false);
+        }
+      } catch (err) {
+        console.warn("Backend unreachable or timed out - attempting cognitive fallback to local mock data.");
+        // Fallback to local mock data using string comparison for robustness
+        const currentId = String(params.problem_id);
+        const mock = problemData[currentId];
+        
+        if (mock) {
+           setProblem({ ...mock, isOffline: true });
+           setTimeLeft((mock.timeLimit || 60) * 60);
+           if (!solution) setSolution(mock.type === "code" ? "// Your implementation here" : "% Rendered LaTeX proof here");
+           setLoading(false);
+        } else {
+           setLoading(false);
+        }
+      }
+    };
+    fetchProblem();
+  }, [params.problem_id]);
+
+  useEffect(() => {
+    if (!problem || timeLeft <= 0) return;
     const interval = setInterval(() => setTimeLeft((t) => t - 1), 1000);
     return () => clearInterval(interval);
   }, [timeLeft]);
@@ -113,6 +149,7 @@ export default function SolvePage({ params: paramsPromise }: { params: Promise<{
     );
   }
 
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-black">
       {/* Top Bar */}
@@ -122,25 +159,38 @@ export default function SolvePage({ params: paramsPromise }: { params: Promise<{
             <Home className="size-4" />
           </Link>
           <div className="h-4 w-[1px] bg-white/10" />
-          <h2 className="text-sm font-bold text-white uppercase tracking-tighter truncate max-w-xs">{problem.title}</h2>
-          <div className="rounded-md bg-primary/10 border border-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary uppercase">
-            Tier {problem.tier}
-          </div>
+          {loading ? (
+            <div className="h-4 w-48 bg-white/5 rounded animate-pulse" />
+          ) : (
+            <h2 className="text-sm font-black text-white uppercase tracking-tighter truncate max-w-xs">{problem?.title}</h2>
+          )}
+          {!loading && (
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-500 uppercase">
+                Tier {problem?.tier}
+              </div>
+              {problem?.isOffline && (
+                 <div className="rounded-md bg-zinc-500/10 border border-zinc-500/20 px-2 py-0.5 text-[10px] font-black text-zinc-500 uppercase">
+                   Simulated Node
+                 </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-8">
           <div className="flex flex-col items-end">
-            <div className="flex items-center gap-2 text-xl font-mono font-bold text-primary">
+            <div className="flex items-center gap-2 text-xl font-mono font-black text-primary">
               <Clock className="size-5" />
-              {formatTime(timeLeft)}
+              {loading ? "00:00" : formatTime(timeLeft)}
             </div>
-            <span className="text-[10px] uppercase font-bold text-zinc-600 tracking-widest">Time Remaining</span>
+            <span className="text-[10px] uppercase font-black text-zinc-600 tracking-widest">Time Remaining</span>
           </div>
           
           <button
             onClick={handleSubmit}
-            disabled={submitting}
-            className="flex h-10 items-center gap-2 rounded-xl bg-primary px-6 text-xs font-bold text-white transition-all hover:scale-105 active:shadow-inner disabled:opacity-50"
+            disabled={submitting || loading}
+            className="flex h-10 items-center gap-2 rounded-xl bg-primary px-6 text-xs font-black text-white transition-all hover:scale-105 active:shadow-inner disabled:opacity-50 shadow-lg shadow-primary/20"
           >
             {submitting ? "Submitting..." : "Submit Solution"}
             <Send className="size-3.5" />
@@ -172,23 +222,39 @@ export default function SolvePage({ params: paramsPromise }: { params: Promise<{
           <div className="p-8">
             <div className="flex items-center gap-2 mb-8">
               <div className="size-2 rounded-full bg-primary" />
-              <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-widest">Problem Statement</span>
+              <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Problem Statement</span>
             </div>
             
-            <div className="prose prose-invert max-w-none">
-              <LaTeXRenderer content={problem.statement} />
-            </div>
-
-            <div className="mt-12 rounded-2xl border border-white/5 bg-white/5 p-6">
-              <h4 className="text-xs font-bold uppercase text-zinc-500 tracking-wider mb-4">Verification Reward</h4>
-              <div className="flex items-end gap-2">
-                <span className="text-4xl font-mono font-bold text-white">{problem.reward}</span>
-                <span className="text-sm font-bold text-primary mb-1">POI TOKENS</span>
+            {loading ? (
+              <div className="flex flex-col gap-6">
+                <div className="h-4 w-full bg-white/5 rounded animate-pulse" />
+                <div className="h-4 w-5/6 bg-white/5 rounded animate-pulse" />
+                <div className="h-4 w-4/6 bg-white/5 rounded animate-pulse" />
+                {problem?.isTranslating && (
+                   <div className="mt-8 p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-center gap-3">
+                      <div className="size-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Translating via DeepL AI...</span>
+                   </div>
+                )}
               </div>
-              <p className="mt-4 text-xs text-zinc-600 leading-relaxed">
-                Tokens will be released to your wallet address after 3 successful peer verifications. Ensure your proof is clear and rigorous.
-              </p>
-            </div>
+            ) : (
+              <>
+                <div className="text-white text-base leading-relaxed font-sans scroll-smooth">
+                  <LaTeXRenderer content={problem.statement} />
+                </div>
+
+                <div className="mt-12 rounded-2xl border border-black/5 bg-white/5 p-6">
+                  <h4 className="text-xs font-black uppercase text-zinc-500 tracking-wider mb-4">Verification Reward</h4>
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-mono font-black text-white">{problem.reward}</span>
+                    <span className="text-sm font-black text-primary mb-1">POI TOKENS</span>
+                  </div>
+                  <p className="mt-4 text-xs text-zinc-600 leading-relaxed uppercase font-black tracking-tighter opacity-60">
+                    Tokens will be released after 3 successful peer verifications. Ensure your proof is clear and rigorous.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -205,11 +271,11 @@ export default function SolvePage({ params: paramsPromise }: { params: Promise<{
                  Copy-Paste & selection disabled
                </span>
              </div>
-             {problem.type === "code" && (
+             {problem?.type === "code" && (
                <select
                  value={selectedLang}
                  onChange={(e) => setSelectedLang(e.target.value)}
-                 className="bg-transparent border-none text-[10px] font-bold text-zinc-400 focus:ring-0 uppercase cursor-pointer hover:text-white"
+                 className="bg-transparent border-none text-[10px] font-black text-zinc-400 focus:ring-0 uppercase cursor-pointer hover:text-white"
                >
                  <option value="cpp">C++ (G++ 11)</option>
                  <option value="python">Python 3.10</option>
@@ -221,7 +287,7 @@ export default function SolvePage({ params: paramsPromise }: { params: Promise<{
           <div className="flex-1 overflow-hidden transition-opacity" style={{ opacity: isTabFocused ? 1 : 0.3 }}>
             <Editor
               theme="vs-dark"
-              language={problem.type === "code" ? selectedLang : "latex"}
+              language={problem?.type === "code" ? selectedLang : "latex"}
               value={solution}
               onChange={(v) => setSolution(v || "")}
               options={{

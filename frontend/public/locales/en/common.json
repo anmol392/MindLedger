@@ -1,0 +1,32 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "problems": "Problems",
+    "practice": "Practice",
+    "contests": "Contests",
+    "papers": "Research",
+    "leaderboard": "Leaderboard"
+  },
+  "labels": {
+    "welcome": "Welcome back, Solver",
+    "language": "Select Language",
+    "settings": "Settings",
+    "profile": "Profile",
+    "rank": "Rank",
+    "tokens": "Tokens",
+    "solved": "Solved"
+  },
+  "buttons": {
+    "save": "Save Changes",
+    "join": "Join Contributor",
+    "register": "Register Now",
+    "solve": "Claim Problem",
+    "submit": "Submit Solution"
+  },
+  "dashboard": {
+    "stats_earned": "Total MNT Earned",
+    "stats_solved": "Problems Solved",
+    "stats_streak": "Current Streak",
+    "stats_rank": "Global Rank"
+  }
+}

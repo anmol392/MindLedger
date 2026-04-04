@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  student
+  professor
+  recruiter
+  admin
+}
+
+enum PaperStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+}
+
+enum Verdict {
+  APPROVE
+  REJECT
+  REVISION
+}
+
+enum ContestStatus {
+  UPCOMING
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+model User {
+  walletAddress    String             @id @map("wallet_address") @db.VarChar(42)
+  username         String?            @db.VarChar(255)
+  role             Role               @default(student)
+  language         String             @default("en")
+  kycVerified      Boolean            @default(false) @map("kyc_verified")
+  poiBalance       Decimal            @default(0.0) @map("poi_balance") @db.Decimal(20, 8)
+  reputationScore  Decimal            @default(1.00) @map("reputation_score") @db.Decimal(5, 2)
+  expertDomains    String[]           @map("expert_domains")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  lastLogin        DateTime?          @map("last_login")
+  
+  problemsCreated  Problem[]          @relation("ProblemCreator")
+  submissions      Submission[]
+  verifications    Verification[]
+  papersCreated    PaperCollaboration[] @relation("PaperCreator")
+  paperSections    PaperSection[]
+  paperReviews     PaperReview[]
+  contributions    PaperContribution[]
+  contestsCreated  Contest[]          @relation("ContestCreator")
+  registrations    ContestRegistration[]
+  dashboardCache   UserDashboardCache?
+}
+
+model Problem {
+  id               String             @id @default(uuid()) @db.Uuid
+  creatorWallet    String             @map("creator_wallet") @db.VarChar(42)
+  creator          User               @relation("ProblemCreator", fields: [creatorWallet], references: [walletAddress])
+  title            String             @db.VarChar(255)
+  statement        String             @db.Text
+  translatedBody   Json?              @map("translated_body")
+  trapAssertion    String?            @map("trap_assertion") @db.Text
+  correctResult    String?            @map("correct_result") @db.Text
+  subject          String             @db.VarChar(50)
+  tier             Int
+  timeLimitMinutes Int                @map("time_limit_minutes")
+  rewardTokens     Decimal            @map("reward_tokens") @db.Decimal(20, 8)
+  isActive         Boolean            @default(true) @map("is_active")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  
+  submissions      Submission[]
+  blocks           Block[]
+  translations     ProblemTranslation[]
+}
+
+model ProblemTranslation {
+  id                   String   @id @default(uuid()) @db.Uuid
+  problemId            String   @map("problem_id") @db.Uuid
+  problem              Problem  @relation(fields: [problemId], references: [id])
+  langCode             String   @map("lang_code") @db.VarChar(10)
+  translatedBodyLatex  String   @map("translated_body_latex") @db.Text
+  createdAt            DateTime @default(now()) @map("created_at")
+}
+
+model PaperCollaboration {
+  id               String             @id @default(uuid()) @db.Uuid
+  title            String             @db.VarChar(255)
+  abstract         String             @db.Text
+  status           PaperStatus        @default(DRAFT)
+  creatorId        String             @map("creator_id") @db.VarChar(42)
+  creator          User               @relation("PaperCreator", fields: [creatorId], references: [walletAddress])
+  subjectTags      String[]           @map("subject_tags")
+  ipfsHash         String?            @map("ipfs_hash") @db.VarChar(255)
+  mintTxHash       String?            @map("mint_tx_hash") @db.VarChar(255)
+  totalMntPool     Decimal            @default(0.0) @map("total_mnt_pool") @db.Decimal(20, 8)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  publishedAt      DateTime?          @map("published_at")
+  
+  sections         PaperSection[]
+  contributions    PaperContribution[]
+  reviews          PaperReview[]
+}
+
+model PaperSection {
+  id               String             @id @default(uuid()) @db.Uuid
+  paperId          String             @map("paper_id") @db.Uuid
+  paper            PaperCollaboration @relation(fields: [paperId], references: [id])
+  authorId         String             @map("author_id") @db.VarChar(42)
+  author           User               @relation(fields: [authorId], references: [walletAddress])
+  sectionTitle     String             @map("section_title") @db.VarChar(255)
+  contentMarkdown  String             @map("content_markdown") @db.Text
+  orderIndex       Int                @map("order_index")
+  isVerified       Boolean            @default(false) @map("is_verified")
+  verifiedAt       DateTime?          @map("verified_at")
+}
+
+model PaperContribution {
+  id               String             @id @default(uuid()) @db.Uuid
+  paperId          String             @map("paper_id") @db.Uuid
+  paper            PaperCollaboration @relation(fields: [paperId], references: [id])
+  userId           String             @map("user_id") @db.VarChar(42)
+  user             User               @relation(fields: [userId], references: [walletAddress])
+  weightPercent    Decimal            @map("weight_percent") @db.Decimal(5, 2)
+  mntEarned        Decimal            @map("mnt_earned") @db.Decimal(20, 8)
+  calculatedAt     DateTime           @default(now()) @map("calculated_at")
+}
+
+model PaperReview {
+  id               String             @id @default(uuid()) @db.Uuid
+  paperId          String             @map("paper_id") @db.Uuid
+  paper            PaperCollaboration @relation(fields: [paperId], references: [id])
+  reviewerId       String             @map("reviewer_id") @db.VarChar(42)
+  reviewer         User               @relation(fields: [reviewerId], references: [walletAddress])
+  verdict          Verdict
+  comments         String             @db.Text
+  createdAt        DateTime           @default(now()) @map("created_at")
+}
+
+model Contest {
+  id                   String             @id @default(uuid()) @db.Uuid
+  title                String             @db.VarChar(255)
+  organizerName        String             @map("organizer_name") @db.VarChar(255)
+  organizerLogo        String?            @map("organizer_logo") @db.VarChar(255)
+  description          String             @db.Text
+  subjectFilter        Json               @map("subject_filter")
+  difficultyTier       Json               @map("difficulty_tier")
+  startsAt             DateTime           @map("starts_at")
+  endsAt               DateTime           @map("ends_at")
+  durationMins         Int                @map("duration_mins")
+  registrationDeadline DateTime           @map("registration_deadline")
+  prizePoolMnt         Decimal            @map("prize_pool_mnt") @db.Decimal(20, 8)
+  prizeDistribution    Json               @map("prize_distribution")
+  maxParticipants      Int                @map("max_participants")
+  currentParticipants  Int                @default(0) @map("current_participants")
+  status               ContestStatus      @default(UPCOMING)
+  problemIds           Json               @map("problem_ids")
+  isPublic             Boolean            @default(true) @map("is_public")
+  createdBy            String             @map("created_by") @db.VarChar(42)
+  creator              User               @relation("ContestCreator", fields: [createdBy], references: [walletAddress])
+  sponsorId            String?            @map("sponsor_id") @db.VarChar(255)
+  createdAt            DateTime           @default(now()) @map("created_at")
+  
+  registrations        ContestRegistration[]
+}
+
+model ContestRegistration {
+  id           String   @id @default(uuid()) @db.Uuid
+  contestId    String   @map("contest_id") @db.Uuid
+  contest      Contest  @relation(fields: [contestId], references: [id])
+  userId       String   @map("user_id") @db.VarChar(42)
+  user         User     @relation(fields: [userId], references: [walletAddress])
+  registeredAt DateTime @default(now()) @map("registered_at")
+
+  @@unique([contestId, userId])
+}
+
+model UserDashboardCache {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @map("user_id") @db.VarChar(42)
+  user           User     @relation(fields: [userId], references: [walletAddress])
+  cacheData      Json     @map("cache_data")
+  lastRefreshed  DateTime @default(now()) @map("last_refreshed")
+}
+
+model Submission {
+  id               String             @id @default(uuid()) @db.Uuid
+  problemId        String             @map("problem_id") @db.Uuid
+  problem          Problem            @relation(fields: [problemId], references: [id])
+  solverWallet     String             @map("solver_wallet") @db.VarChar(42)
+  user             User               @relation(fields: [solverWallet], references: [walletAddress])
+  solutionContent  String             @map("solution_content") @db.Text
+  solutionHash     String?            @unique @map("solution_hash") @db.VarChar(64)
+  embedding        Unsupported("vector(384)")?
+  status           String             @default("pending") @db.VarChar(50)
+  proctoringScore  Float?             @default(1.0) @map("proctoring_score")
+  warningsCount    Int                @default(0) @map("warnings_count")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  
+  verifications    Verification[]
+}
+
+model Verification {
+  id             String     @id @default(uuid()) @db.Uuid
+  submissionId   String     @map("submission_id") @db.Uuid
+  submission     Submission @relation(fields: [submissionId], references: [id])
+  verifierWallet String     @map("verifier_wallet") @db.VarChar(42)
+  user           User       @relation(fields: [verifierWallet], references: [walletAddress])
+  approved       Boolean?
+  comments       String?    @db.Text
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  @@unique([submissionId, verifierWallet])
+}
+
+model Block {
+  blockId          BigInt    @id @map("block_id")
+  timestamp        DateTime  @default(now()) @map("timestamp")
+  problemId        String    @map("problem_id") @db.Uuid
+  problem          Problem   @relation(fields: [problemId], references: [id])
+  solverWallet     String    @map("solver_wallet") @db.VarChar(42)
+  solutionHash     String?   @map("solution_hash") @db.VarChar(64)
+  verifiers        String[]  @map("verifiers") @db.VarChar(42)
+  tokenReward      Decimal   @map("token_reward") @db.Decimal(20, 8)
+  difficultyTier   Int       @map("difficulty_tier")
+  previousBlockHash String   @map("previous_block_hash") @db.VarChar(64)
+}
+
+model Transaction {
+  id         String   @id @default(uuid()) @db.Uuid
+  blockId    BigInt?  @map("block_id")
+  fromWallet String?  @map("from_wallet") @db.VarChar(42)
+  toWallet   String?  @map("to_wallet") @db.VarChar(42)
+  amount     Decimal  @db.Decimal(20, 8)
+  txType     String?  @map("tx_type") @db.VarChar(50)
+  cbdcTxRef  String?  @map("cbdc_tx_ref") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+}

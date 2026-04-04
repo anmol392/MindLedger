@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Brain, Wallet, Trophy, LayoutDashboard, Search, Menu } from "lucide-react";
+import { Brain, Wallet, Trophy, LayoutDashboard, Search, Menu, FileText, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -12,11 +12,13 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const navItems = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Problems", href: "/problems", icon: Search },
   { name: "Practice", href: "/practice", icon: Brain },
+  { name: "Contests", href: "/contests", icon: Trophy },
+  { name: "Research", href: "/papers", icon: FileText },
   { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Verify", href: "/verify", icon: Brain },
+  { name: "Language", href: "/settings/language", icon: Globe },
 ];
 
 export function Navbar() {
@@ -28,9 +30,9 @@ export function Navbar() {
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20">
-              <Brain className="size-6 text-primary-foreground" />
+              <Brain className="size-6 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-foreground uppercase">MINDLEDGER</span>
+            <span className="text-xl font-black tracking-tighter text-[#0F172A] uppercase">MINDLEDGER</span>
           </Link>
 
           <div className="hidden md:flex md:items-center md:gap-1">
@@ -48,7 +50,7 @@ export function Navbar() {
                   {isActive && (
                     <motion.div
                       layoutId="nav-active"
-                      className="absolute inset-0 rounded-lg bg-muted"
+                      className="absolute inset-0 rounded-lg bg-primary/5"
                       transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                     />
                   )}

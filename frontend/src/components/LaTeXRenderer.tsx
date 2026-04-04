@@ -22,14 +22,18 @@ export function LaTeXRenderer({ content, block = false }: LaTeXRendererProps) {
   const parts = content.split(/(\$\$[\s\S]*?\$\$|\$.*?\$)/g);
 
   return (
-    <div className="math-display">
+    <div className="math-display text-white selection:bg-emerald-500/30">
       {parts.map((part, index) => {
         if (part.startsWith("$$") && part.endsWith("$$")) {
-          return <BlockMath key={index} math={part.slice(2, -2)} />;
+          return (
+            <div key={index} className="my-6 text-white overflow-x-auto no-scrollbar">
+              <BlockMath math={part.slice(2, -2)} />
+            </div>
+          );
         } else if (part.startsWith("$") && part.endsWith("$")) {
-          return <InlineMath key={index} math={part.slice(1, -1)} />;
+          return <span key={index} className="text-white"><InlineMath math={part.slice(1, -1)} /></span>;
         }
-        return <span key={index}>{part}</span>;
+        return <span key={index} className="text-white/90">{part}</span>;
       })}
     </div>
   );

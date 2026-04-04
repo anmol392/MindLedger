@@ -1,0 +1,32 @@
+{
+  "nav": {
+    "dashboard": "डैशबोर्ड",
+    "problems": "समस्याएं",
+    "practice": "अभ्यास",
+    "contests": "प्रतियोगिताएं",
+    "papers": "शोध",
+    "leaderboard": "लीडरबोर्ड"
+  },
+  "labels": {
+    "welcome": "नमस्ते समाधानकर्ता",
+    "language": "भाषा चुनें",
+    "settings": "सेटिंग्स",
+    "profile": "प्रोफ़ाइल",
+    "rank": "रैंक",
+    "tokens": "टोकन",
+    "solved": "हल किया गया"
+  },
+  "buttons": {
+    "save": "बदलाव सहेजें",
+    "join": "योगदानकर्ता बनें",
+    "register": "अभी पंजीकरण करें",
+    "solve": "समस्या का दावा करें",
+    "submit": "समाधान सबमिट करें"
+  },
+  "dashboard": {
+    "stats_earned": "कुल अर्जित MNT",
+    "stats_solved": "हल की गई समस्याएं",
+    "stats_streak": "वर्तमान निरंतरता",
+    "stats_rank": "वैश्विक रैंक"
+  }
+}

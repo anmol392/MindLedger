@@ -1,0 +1,32 @@
+name: Deploy MindLedger to Production VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS using SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ~/MindLedger || exit 1
+            
+            # Pull latest changes
+            echo "Pulling latest code from main branch..."
+            git pull origin main
+            
+            # Rebuild and restart the Docker containers
+            echo "Building and starting Docker containers..."
+            docker compose down
+            docker compose up -d --build
+            
+            echo "Deployment completed successfully!"
